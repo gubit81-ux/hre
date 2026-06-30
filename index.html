@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Calculate</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        body {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            background-color: #f4f4f9;
+            overflow: hidden;
+        }
+
+        .calculator {
+            background-color: #22252d;
+            padding: 20px;
+            border-radius: 30px;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.3);
+            width: 340px;
+            z-index: 1;
+        }
+
+        #display {
+            width: 100%;
+            height: 80px;
+            background-color: transparent;
+            border: none;
+            outline: none;
+            color: #ffffff;
+            font-size: 2.5rem;
+            text-align: right;
+            padding: 10px 20px;
+            margin-bottom: 20px;
+        }
+
+        .buttons {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 12px;
+        }
+
+        button {
+            padding: 20px;
+            border-radius: 50%;
+            border: none;
+            outline: none;
+            font-size: 1.5rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background-color 0.2s, transform 0.1s;
+        }
+
+        button:active {
+            transform: scale(0.95);
+        }
+
+        .btn-number {
+            background-color: #292d36;
+            color: #ffffff;
+        }
+        .btn-number:hover {
+            background-color: #353a46;
+        }
+
+        .btn-operator {
+            background-color: #ff9f0a;
+            color: #ffffff;
+        }
+        .btn-operator:hover {
+            background-color: #cc7f08;
+        }
+
+        .btn-function {
+            background-color: #a5a5a5;
+            color: #000000;
+        }
+        .btn-function:hover {
+            background-color: #d4d4d2;
+        }
+
+        .btn-equal {
+            background-color: #26d366;
+            color: #ffffff;
+            border-radius: 40px;
+            grid-column: span 2;
+        }
+        .btn-equal:hover {
+            background-color: #1ea851;
+        }
+
+        #video-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background-color: black;
+            z-index: 9999;
+        }
+
+        #fullscreen-video {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="calculator">
+        <input type="text" id="display" readonly value="0">
+        
+        <div class="buttons">
+            <button class="btn-function" onclick="clearDisplay()">C</button>
+            <button class="btn-function" onclick="deleteLast()">⌫</button>
+            <button class="btn-function" onclick="appendValue('%')">%</button>
+            <button class="btn-operator" onclick="appendValue('/')">÷</button>
+
+            <button class="btn-number" onclick="appendValue('7')">7</button>
+            <button class="btn-number" onclick="appendValue('8')">8</button>
+            <button class="btn-number" onclick="appendValue('9')">9</button>
+            <button class="btn-operator" onclick="appendValue('*')">×</button>
+
+            <button class="btn-number" onclick="appendValue('4')">4</button>
+            <button class="btn-number" onclick="appendValue('5')">5</button>
+            <button class="btn-number" onclick="appendValue('6')">6</button>
+            <button class="btn-operator" onclick="appendValue('-')">-</button>
+
+            <button class="btn-number" onclick="appendValue('1')">1</button>
+            <button class="btn-number" onclick="appendValue('2')">2</button>
+            <button class="btn-number" onclick="appendValue('3')">3</button>
+            <button class="btn-operator" onclick="appendValue('+')">+</button>
+
+            <button class="btn-number" onclick="appendValue('0')">0</button>
+            <button class="btn-number" onclick="appendValue('.')">.</button>
+            <button class="btn-equal" onclick="calculate()">=</button>
+        </div>
+    </div>
+
+    <div id="video-overlay">
+        <video id="fullscreen-video" controls>
+            <source src="gr.mp4" type="video/mp4">
+        </video>
+    </div>
+
+    <script>
+        const display = document.getElementById('display');
+        const videoOverlay = document.getElementById('video-overlay');
+        const video = document.getElementById('fullscreen-video');
+
+        function appendValue(value) {
+            if (display.value === '0' && !isNaN(value)) {
+                display.value = value;
+            } else {
+                display.value += value;
+            }
+        }
+
+        function clearDisplay() {
+            display.value = '0';
+        }
+
+        function deleteLast() {
+            if (display.value.length > 1) {
+                display.value = display.value.slice(0, -1);
+            } else {
+                display.value = '0';
+            }
+        }
+
+        function calculate() {
+            try {
+                let expression = display.value;
+
+                if (expression === '1+1') {
+                    videoOverlay.style.display = 'block';
+                    video.play();
+                    
+                    video.onended = function() {
+                        videoOverlay.style.display = 'none';
+                        display.value = '2';
+                    };
+                    return;
+                }
+
+                expression = expression.replace(/%/g, '/100');
+                let result = eval(expression);
+
+                if (result % 1 !== 0) {
+                    result = parseFloat(result.toFixed(8));
+                }
+
+                display.value = result;
+            } catch (error) {
+                display.value = 'Error';
+                setTimeout(clearDisplay, 1500);
+            }
+        }
+    </script>
+
+</body>
+</html>
