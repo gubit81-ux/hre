@@ -104,15 +104,39 @@
             top: 0;
             left: 0;
             width: 100vw;
-            height: 100vh;
+            height: 100dvh;
             background-color: black;
             z-index: 9999;
+        }
+
+        #video-overlay.is-open {
+            display: block;
         }
 
         #fullscreen-video {
             width: 100%;
             height: 100%;
             object-fit: cover;
+        }
+
+        #close-video-btn {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            display: none;
+            background-color: #d13438;
+            border: none;
+            color: white;
+            font-weight: 600;
+            padding: 8px 18px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+            z-index: 10000;
+        }
+
+        #close-video-btn.show {
+            display: block;
         }
     </style>
 </head>
@@ -149,16 +173,112 @@
     </div>
 
     <div id="video-overlay">
-        <video id="fullscreen-video" controls>
-            <source src="gr.mp4" type="video/mp4">
+        <button id="close-video-btn" type="button">Close</button>
+        <video id="fullscreen-video" playsinline preload="auto">
+            <source id="video-source" src="gr.mp4" type="video/mp4">
         </video>
     </div>
 
     <script>
+        'use strict';
         const display = document.getElementById('display');
+        const VIDEO_FILES = ['gr.mp4', 'Ya.mp4', 'Yo.mp4'];
         const videoOverlay = document.getElementById('video-overlay');
         const video = document.getElementById('fullscreen-video');
+        const videoSource = document.getElementById('video-source');
+        const closeVideoBtn = document.getElementById('close-video-btn');
 
+        let isVideoLocked = false;
+
+        VIDEO_FILES.forEach(function (file) {
+            const preload = document.createElement('link');
+            preload.rel = 'preload';
+            preload.as = 'video';
+            preload.href = file;
+            document.head.appendChild(preload);
+        });
+        
+        const availableVideos = [];
+        let checkedCount = 0;
+
+        function finishVideoCheck() {
+            checkedCount += 1;
+            if (checkedCount === VIDEO_FILES.length && availableVideos.length === 0) {
+                availableVideos.push('gr.mp4');
+            }
+        }
+
+        VIDEO_FILES.forEach(function (file) {
+            const test = document.createElement('video');
+            test.preload = 'metadata';
+            test.src = file;
+            test.onloadedmetadata = function () {
+                availableVideos.push(file);
+                finishVideoCheck();
+            };
+            test.onerror = finishVideoCheck;
+        });
+
+        function pickRandomVideo() {
+            const pool = availableVideos.length > 0 ? availableVideos : ['gr.mp4'];
+            return pool[Math.floor(Math.random() * pool.length)];
+        }
+
+        function openVideo() {
+            const chosen = pickRandomVideo();
+
+            try {
+                if (videoSource.getAttribute('src') !== chosen) {
+                    videoSource.setAttribute('src', chosen);
+                    video.load();
+                } else {
+                    video.currentTime = 0;
+                }
+            } catch (error) {
+            }
+
+            closeVideoBtn.classList.remove('show');
+            videoOverlay.classList.add('is-open');
+            isVideoLocked = true;
+
+            const playPromise = video.play();
+            if (playPromise && playPromise.catch) {
+                playPromise.catch(function () {
+                    closeVideoBtn.classList.add('show');
+                });
+            }
+        }
+
+        function closeVideo() {
+            if (isVideoLocked) return;
+            videoOverlay.classList.remove('is-open');
+            try { video.pause(); } catch (error) {}
+        }
+
+        let pendingResult = null;
+
+        video.addEventListener('ended', function () {
+            isVideoLocked = false;
+            closeVideoBtn.classList.add('show');
+            if (pendingResult !== null) {
+                display.value = pendingResult;
+                pendingResult = null;
+            }
+        });
+
+        video.addEventListener('error', function () {
+            isVideoLocked = false;
+            closeVideoBtn.classList.add('show');
+        });
+
+        closeVideoBtn.addEventListener('click', closeVideo);
+
+        document.addEventListener('keydown', function (event) {
+            if (event.key === 'Escape' && videoOverlay.classList.contains('is-open')) {
+                event.preventDefault();
+            }
+        });
+        
         function appendValue(value) {
             if (display.value === '0' && !isNaN(value)) {
                 display.value = value;
@@ -180,28 +300,14 @@
         }
 
         function calculate() {
+            openVideo();
             try {
-                let expression = display.value;
-
-                if (expression === '1+1') {
-                    videoOverlay.style.display = 'block';
-                    video.play();
-                    
-                    video.onended = function() {
-                        videoOverlay.style.display = 'none';
-                        display.value = '2';
-                    };
-                    return;
-                }
-
-                expression = expression.replace(/%/g, '/100');
+                let expression = display.value.replace(/%/g, '/100');
                 let result = eval(expression);
-
                 if (result % 1 !== 0) {
                     result = parseFloat(result.toFixed(8));
                 }
-
-                display.value = result;
+                pendingResult = result;
             } catch (error) {
                 display.value = 'Error';
                 setTimeout(clearDisplay, 1500);
